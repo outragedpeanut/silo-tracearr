@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tracearr setup</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1d23; --muted: #5b6270; --card: #f5f6f8; --line: #d9dce2;
+    --accent: #2f6fed; --accent-fg: #ffffff; --ok: #1a7f45; --bad: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14161a; --fg: #e8eaee; --muted: #9aa1ae; --card: #1d2026; --line: #343843;
+      --accent: #6b9bff; --accent-fg: #0b1020; --ok: #4cc283; --bad: #ff8a80;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, sans-serif; }
+  main { max-width: 640px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  p.lead { color: var(--muted); margin: 0 0 24px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  label { display: block; font-weight: 600; margin-bottom: 6px; }
+  .hint { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
+  .row { display: flex; gap: 8px; }
+  input[type=text], input[type=password] {
+    flex: 1; min-width: 0; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--bg); color: var(--fg); font: 14px ui-monospace, monospace;
+  }
+  button {
+    border: 1px solid var(--line); background: var(--bg); color: var(--fg); border-radius: 8px;
+    padding: 0 12px; min-height: 40px; font: inherit; cursor: pointer;
+  }
+  button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 600; padding: 0 16px; }
+  button:disabled { opacity: .5; cursor: default; }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #addr { width: 100%; }
+  button.icon { width: 40px; padding: 0; display: grid; place-items: center; }
+  svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  #status { min-height: 22px; margin-top: 10px; font-size: 14px; }
+  .ok { color: var(--ok); } .bad { color: var(--bad); }
+  ol { padding-left: 20px; margin: 0; } li { margin: 4px 0; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Tracearr setup</h1>
+  <p class="lead">Generate the URL Tracearr needs to monitor this Silo server.</p>
+
+  <div id="needkey" class="card hidden">
+    <strong>Add the Silo admin API key first.</strong>
+    <p class="hint">Open this plugin's settings, paste an unscoped administrator API key, save, then reload this page.</p>
+  </div>
+
+  <div id="main" class="card hidden">
+    <div id="nosecret" class="hidden">
+      <p style="margin-top:0">No access secret yet. Generate one to get your Tracearr URL.</p>
+      <button class="primary" id="gen1" type="button">Generate access secret</button>
+    </div>
+
+    <div id="hasurl" class="hidden">
+      <label for="url">Tracearr server URL</label>
+      <div class="row">
+        <input id="url" type="password" readonly autocomplete="off" spellcheck="false" aria-describedby="urlhint">
+        <button class="icon" id="eye" type="button" aria-label="Show URL" aria-pressed="false" title="Show URL">
+          <svg id="eyeicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+        <button class="icon" id="copy" type="button" aria-label="Copy URL" title="Copy URL">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+        </button>
+      </div>
+      <p class="hint" id="urlhint">Hidden for safety. Anyone with this URL can see who is watching what. The copy button works without showing it.</p>
+
+      <div style="margin-top:16px">
+        <label for="addr">Address Tracearr uses to reach Silo</label>
+        <input id="addr" type="text" autocomplete="off" spellcheck="false">
+        <p class="hint">Filled from the address in your browser. Use your server's local address (for example <code>http://192.168.1.10:8090</code>) if Tracearr runs on your home network. Avoid a public address.</p>
+      </div>
+
+      <div style="margin-top:16px">
+        <button id="gen2" type="button">Generate new secret</button>
+        <span class="hint" id="regenhint">Replaces the current secret. Update Tracearr afterwards.</span>
+      </div>
+    </div>
+    <div id="status" role="status" aria-live="polite"></div>
+  </div>
+
+  <div class="card">
+    <strong>In Tracearr</strong>
+    <ol>
+      <li>Add a server and choose <b>Jellyfin</b>.</li>
+      <li>Paste the URL above.</li>
+      <li>For the API key, enter anything (for example <code>silo</code>).</li>
+    </ol>
+  </div>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  var base = location.pathname.replace(/\/setup\/?$/, "");
+  var $ = function (id) { return document.getElementById(id); };
+  var state = null, armed = false;
+
+  function show(el, on) { el.classList.toggle("hidden", !on); }
+  function status(msg, cls) { var s = $("status"); s.textContent = msg; s.className = cls || ""; }
+
+  function api(path, opts) {
+    return fetch(base + "/setup/api/" + path, Object.assign({ credentials: "same-origin" }, opts || {}))
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); });
+  }
+
+  function fullURL() {
+    if (!state || !state.secret) return "";
+    var id = state.installation_id;
+    if (!id) { var m = location.pathname.match(/\/plugins\/(\d+)\//); id = m ? m[1] : ""; }
+    var addr = $("addr").value.trim().replace(/\/+$/, "");
+    return addr + "/api/v1/plugins/" + id + "/t/" + state.secret;
+  }
+
+  function render() {
+    show($("needkey"), !state.has_api_key);
+    show($("main"), state.has_api_key);
+    show($("nosecret"), !state.secret);
+    show($("hasurl"), !!state.secret);
+    $("url").value = fullURL();
+  }
+
+  function setRevealed(on) {
+    $("url").type = on ? "text" : "password";
+    var b = $("eye");
+    b.setAttribute("aria-pressed", String(on));
+    b.setAttribute("aria-label", on ? "Hide URL" : "Show URL");
+    b.title = on ? "Hide URL" : "Show URL";
+    $("eyeicon").innerHTML = on
+      ? '<path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.2M6.6 6.6A17 17 0 0 0 2 12s3.5 7 10 7a9.7 9.7 0 0 0 4.2-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>'
+      : '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>';
+  }
+
+  function load() {
+    return api("state").then(function (r) {
+      if (!r.ok) { status("Could not load setup state.", "bad"); return; }
+      state = r.body;
+      if (!$("addr").value) $("addr").value = location.origin;
+      render();
+    }).catch(function () { status("Could not reach the plugin. Reload this page.", "bad"); });
+  }
+
+  function waitForSave(expected, tries) {
+    return new Promise(function (resolve) { setTimeout(resolve, 1500); })
+      .then(function () { return api("state"); })
+      .then(function (r) {
+        var b = r.body;
+        if (b.secret === expected && b.persisted) { status("Saved. The URL is ready to copy.", "ok"); return; }
+        if (b.save_error) { status(b.save_error, "bad"); return; }
+        if (tries <= 0) { status("Could not confirm the secret was saved. Check the plugin settings.", "bad"); return; }
+        return waitForSave(expected, tries - 1);
+      })
+      .catch(function () {
+        // The plugin restarts after saving, so a failed poll is normal.
+        if (tries <= 0) { status("Could not confirm the secret was saved. Reload this page.", "bad"); return; }
+        return waitForSave(expected, tries - 1);
+      });
+  }
+
+  function generate() {
+    status("Generating...");
+    api("generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })
+      .then(function (r) {
+        if (!r.ok) { status(r.body.error || "Failed.", "bad"); return; }
+        state.secret = r.body.secret;
+        state.installation_id = r.body.installation_id;
+        armed = false; $("gen2").textContent = "Generate new secret";
+        setRevealed(false); render();
+        status("Saving...");
+        return waitForSave(r.body.secret, 12);
+      })
+      .catch(function () { status("Failed to generate a secret.", "bad"); });
+  }
+
+  $("gen1").addEventListener("click", generate);
+  $("gen2").addEventListener("click", function () {
+    if (!armed) { armed = true; this.textContent = "Click again to replace the secret"; status("The current URL will stop working.", ""); return; }
+    generate();
+  });
+  $("eye").addEventListener("click", function () { setRevealed($("url").type === "password"); });
+  $("addr").addEventListener("input", function () { $("url").value = fullURL(); });
+  $("copy").addEventListener("click", function () {
+    var text = fullURL();
+    function done() { status("Copied.", "ok"); }
+    function fallback() {
+      var t = document.createElement("textarea");
+      t.value = text; t.style.position = "fixed"; t.style.opacity = "0";
+      document.body.appendChild(t); t.select();
+      try { document.execCommand("copy"); done(); } catch (e) { status("Could not copy. Click the eye icon and copy it by hand.", "bad"); }
+      document.body.removeChild(t);
+    }
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, fallback);
+    else fallback();
+  });
+
+  load();
+})();
+</script>
+</body>
+</html>
