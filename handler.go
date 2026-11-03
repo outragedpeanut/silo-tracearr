@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	pluginVersion = "0.2.1"
+	pluginVersion = "0.3.0"
 	routePrefix   = "/t/"
 	maxBody       = 32 << 20
 	maxPages      = 10
@@ -32,6 +32,8 @@ type config struct {
 	AdminAPIKey  string
 	SiloURL      string
 	JellyfinURL  string
+	PublicAddr   string // address Tracearr uses to reach Silo
+	TracearrURL  string // the finished URL last saved into the settings form
 }
 
 func (c config) ready() bool { return len(c.AccessSecret) >= 24 && c.AdminAPIKey != "" }
@@ -52,6 +54,8 @@ func parseConfig(entries []*pluginv1.ConfigEntry) config {
 		}
 		c.AccessSecret = str("access_secret")
 		c.AdminAPIKey = str("admin_api_key")
+		c.PublicAddr = strings.TrimRight(str("public_address"), "/")
+		c.TracearrURL = str("tracearr_url")
 		if v := str("silo_url"); v != "" {
 			c.SiloURL = strings.TrimRight(v, "/")
 		}
@@ -75,8 +79,12 @@ type handler struct {
 	saveErr   string // last failure saving a generated secret
 	instID    string // this plugin's installation id, looked up from Silo
 
-	// async runs the save of a generated secret; tests run it inline.
+	// async runs background work; tests run it inline.
 	async func(func())
+	// sleep waits between reconcile retries; tests make it instant.
+	sleep func(time.Duration)
+
+	reconciling bool
 }
 
 func newHandler() *handler {
@@ -84,6 +92,7 @@ func newHandler() *handler {
 		client:  &http.Client{Timeout: 15 * time.Second},
 		posters: map[string]string{},
 		async:   func(f func()) { go f() },
+		sleep:   time.Sleep,
 	}
 	h.cfg.Store(&config{})
 	return h
@@ -95,6 +104,10 @@ func (h *handler) configure(_ context.Context, entries []*pluginv1.ConfigEntry) 
 	h.mu.Lock()
 	h.persisted, h.saveErr = true, ""
 	h.mu.Unlock()
+	if c.AdminAPIKey != "" {
+		// Network calls stay out of Configure: the host bounds it tightly.
+		h.async(h.reconcile)
+	}
 	return nil
 }
 

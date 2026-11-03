@@ -32,7 +32,7 @@ func TestManifestFields(t *testing.T) {
 		t.Fatalf("config schema: %v", cs)
 	}
 	fields := cs[0].GetAdminForm().GetFields()
-	if len(fields) != 4 {
+	if len(fields) != 6 {
 		t.Fatalf("form fields: %d", len(fields))
 	}
 	secrets := 0

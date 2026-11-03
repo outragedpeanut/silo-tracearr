@@ -111,7 +111,11 @@ func (h *handler) setupGenerate(ctx context.Context, cfg config) *pluginv1.Handl
 	h.mu.Unlock()
 
 	h.async(func() {
-		if err := h.saveSecret(context.Background(), next, id, secret); err != nil {
+		fields := obj{"access_secret": secret}
+		if u := next.desiredURL(id); u != "" {
+			fields["tracearr_url"] = u
+		}
+		if err := h.saveFields(context.Background(), next, id, fields); err != nil {
 			log.Printf("saving access secret: %v", err)
 			h.mu.Lock()
 			h.saveErr = err.Error()
@@ -121,11 +125,11 @@ func (h *handler) setupGenerate(ctx context.Context, cfg config) *pluginv1.Handl
 	return noStore(reply(200, obj{"secret": secret, "installation_id": id}))
 }
 
-// saveSecret writes the secret into this plugin's stored "connection" entry.
+// saveFields writes fields into this plugin's stored "connection" entry.
 // Silo merges it over the stored fields and restarts the plugin, so a dropped
 // connection at the end is expected and not treated as a failure.
-func (h *handler) saveSecret(ctx context.Context, cfg config, id, secret string) error {
-	body, _ := json.Marshal(obj{"key": "connection", "value": obj{"access_secret": secret}})
+func (h *handler) saveFields(ctx context.Context, cfg config, id string, fields obj) error {
+	body, _ := json.Marshal(obj{"key": "connection", "value": fields})
 	r, err := http.NewRequestWithContext(ctx, http.MethodPut, cfg.SiloURL+"/api/v2/admin/plugins/installations/"+id+"/config", bytes.NewReader(body))
 	if err != nil {
 		return err
