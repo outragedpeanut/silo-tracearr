@@ -125,15 +125,20 @@ func playMethod(s siloSession) string {
 	return "DirectPlay"
 }
 
-func itemType(mediaType string) string {
-	switch strings.ToLower(mediaType) {
-	case "episode", "tv", "show":
+// itemType decides Movie, Episode or Audio. Silo's media_type describes the
+// parent catalog item, which for an episode is not the word "episode", so the
+// presence of series or episode details is checked first.
+func itemType(s siloSession) string {
+	if s.EpisodeName != "" || s.SeriesName != "" || s.EpisodeNumber != nil || s.SeasonNumber != nil {
+		return "Episode"
+	}
+	switch strings.ToLower(s.MediaType) {
+	case "episode", "tv", "show", "series", "tv_show", "tvshow", "season":
 		return "Episode"
 	case "audio", "track", "music":
 		return "Audio"
-	default:
-		return "Movie"
 	}
+	return "Movie"
 }
 
 func ticks(seconds float64) int64 { return int64(seconds * ticksPerSecond) }
@@ -148,7 +153,7 @@ func mapSession(s siloSession) (obj, string, string) {
 		itemSrc = s.ContentID
 	}
 	itemID := itemJFID(itemSrc)
-	typ := itemType(s.MediaType)
+	typ := itemType(s)
 	method := playMethod(s)
 
 	name := s.MediaTitle
@@ -182,8 +187,12 @@ func mapSession(s siloSession) (obj, string, string) {
 		item["RunTimeTicks"] = ticks(float64(*s.FileDuration))
 	}
 	if typ == "Episode" {
-		item["SeriesName"] = s.SeriesName
-		item["SeriesId"] = itemJFID("series:" + s.SeriesName)
+		seriesName := s.SeriesName
+		if seriesName == "" {
+			seriesName = s.MediaTitle
+		}
+		item["SeriesName"] = seriesName
+		item["SeriesId"] = itemJFID("series:" + seriesName)
 		if s.SeasonNumber != nil {
 			item["ParentIndexNumber"] = *s.SeasonNumber
 		}

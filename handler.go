@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	pluginVersion = "0.2.0"
+	pluginVersion = "0.2.1"
 	routePrefix   = "/t/"
 	maxBody       = 32 << 20
 	maxPages      = 10

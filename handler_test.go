@@ -199,3 +199,25 @@ func TestJFIDStable(t *testing.T) {
 		t.Fatal("not a v5 uuid")
 	}
 }
+
+func TestEpisodeDetectedWithoutEpisodeMediaType(t *testing.T) {
+	two := 2
+	got, _, _ := mapSession(siloSession{
+		SessionID: "x", UserID: "1", MediaFileID: "5", MediaTitle: "Severance", MediaType: "series",
+		SeriesName: "Severance", EpisodeName: "Hello, Ms. Cobel", SeasonNumber: &two, EpisodeNumber: &two,
+	})
+	np := got["NowPlayingItem"].(obj)
+	if np["Type"] != "Episode" || np["Name"] != "Hello, Ms. Cobel" || np["SeriesName"] != "Severance" {
+		t.Fatalf("episode mapped wrong: %v", np)
+	}
+	// series name missing: fall back to the media title
+	got, _, _ = mapSession(siloSession{SessionID: "y", UserID: "1", MediaFileID: "6", MediaTitle: "Show", MediaType: "series", EpisodeName: "Ep"})
+	if got["NowPlayingItem"].(obj)["SeriesName"] != "Show" {
+		t.Errorf("series fallback missing")
+	}
+	// a plain movie stays a movie
+	got, _, _ = mapSession(siloSession{SessionID: "z", UserID: "1", MediaFileID: "7", MediaTitle: "Film", MediaType: "movie"})
+	if got["NowPlayingItem"].(obj)["Type"] != "Movie" {
+		t.Errorf("movie mapped as episode")
+	}
+}

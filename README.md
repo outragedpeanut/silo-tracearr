@@ -1,12 +1,12 @@
 # Tracearr Connector for Silo
 
-**Version 0.2.0**: adds a Tracearr setup page that generates the access secret and builds the URL for you.
+**Version 0.2.1**: adds a Tracearr setup page that generates the access secret and builds the URL for you.
 
 A [Silo](https://github.com/Silo-Server/silo-server) plugin that lets [Tracearr](https://github.com/connorgallopo/tracearr) monitor a Silo server.
 
 Tracearr supports Plex, Jellyfin and Emby. Silo's Jellyfin-compatible port can't be used directly because it reports every account as a non-administrator, only lists the caller's own session, and only returns the caller's own user. This plugin serves a small, **read-only** Jellyfin-shaped API that fills those gaps from Silo's own admin API, so Tracearr sees all live streams (with client IPs), all users, and passes its admin check.
 
-> **Status: 0.2.0, tested by the author on a live Silo + Tracearr setup** (streams, users and polling work; real-time push is not possible). Built against Silo plugin SDK v0.31.0 and Silo's pre-release API. Unit tests cover routing, secret handling and field mapping against fake servers only. Please report what breaks.
+> **Status: 0.2.1, untested against a live server.** Built against Silo plugin SDK v0.31.0 and Silo's pre-release API. Unit tests cover routing, secret handling and field mapping against fake servers only. Please report what breaks.
 
 ## What Tracearr gets
 
@@ -24,7 +24,7 @@ Not supported: terminating streams from Tracearr (read-only by design), push/web
 
 1. **Silo:** Admin → Settings → turn on **Allow Jellyfin apps to connect** (used for libraries/item info).
 2. **Create an API key:** as an administrator, create an **unscoped** API key (starts `sa_`).
-3. **Install the plugin:** Admin → Plugins → upload `tracearr-connector_0.2.0_linux_amd64` (or `_arm64` for ARM hosts). In its settings paste the API key and save. Leave the two addresses at their defaults for the standard Docker setup; change them if Silo's ports differ inside its container.
+3. **Install the plugin:** Admin → Plugins → upload `tracearr-connector_0.2.1_linux_amd64` (or `_arm64` for ARM hosts). In its settings paste the API key and save. Leave the two addresses at their defaults for the standard Docker setup; change them if Silo's ports differ inside its container.
 4. **Open Tracearr setup** from the plugin's menu (or the plugin's admin links). Click **Generate access secret**. The page works out the installation id, saves the secret, and builds the full URL.
 5. The URL stays hidden until you click the eye icon. The copy button copies it without showing it.
 6. **Tracearr:** Add server → **Jellyfin**, paste the URL. The API key field can hold any value.
@@ -47,7 +47,7 @@ Silo only forwards a fixed set of headers to plugins (not `Authorization`) and o
 ```
 go mod tidy
 make test
-make build VERSION=0.2.0
+make build VERSION=0.2.1
 ```
 
 Requires Go 1.26. Tagging `vX.Y.Z` runs the release workflow.
