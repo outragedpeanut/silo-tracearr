@@ -91,6 +91,9 @@ func (h *handler) reconcileOnce(ctx context.Context) (bool, error) {
 	if want := cfg.desiredURL(id); want != "" && want != cfg.TracearrURL {
 		fields["tracearr_url"] = want
 	}
+	if cfg.ShowURL {
+		fields["show_url"] = false // hide the URL again once the page has been saved
+	}
 	if len(fields) == 0 {
 		return false, nil
 	}

@@ -276,3 +276,18 @@ func TestReconcileRetriesThenReportsFailure(t *testing.T) {
 		t.Errorf("failure should be reported: %v", st)
 	}
 }
+
+func TestShowSwitchResetsAfterSave(t *testing.T) {
+	var c putCapture
+	silo := setupSilo(t, &c)
+	defer silo.Close()
+	h := inlineHandler()
+	sec := strings.Repeat("cd", 24)
+	configureWith(h, map[string]any{"admin_api_key": "sa_key", "silo_url": silo.URL, "public_address": "http://10.0.0.5:8090",
+		"access_secret": sec, "tracearr_url": "http://10.0.0.5:8090/api/v1/plugins/7/t/" + sec, "show_url": true})
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if !strings.Contains(c.body, `"show_url":false`) {
+		t.Fatalf("switch should be reset: %q", c.body)
+	}
+}

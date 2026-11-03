@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	pluginVersion = "0.3.0"
+	pluginVersion = "0.3.1"
 	routePrefix   = "/t/"
 	maxBody       = 32 << 20
 	maxPages      = 10
@@ -34,6 +34,7 @@ type config struct {
 	JellyfinURL  string
 	PublicAddr   string // address Tracearr uses to reach Silo
 	TracearrURL  string // the finished URL last saved into the settings form
+	ShowURL      bool   // the "show URL" switch was left on
 }
 
 func (c config) ready() bool { return len(c.AccessSecret) >= 24 && c.AdminAPIKey != "" }
@@ -56,6 +57,7 @@ func parseConfig(entries []*pluginv1.ConfigEntry) config {
 		c.AdminAPIKey = str("admin_api_key")
 		c.PublicAddr = strings.TrimRight(str("public_address"), "/")
 		c.TracearrURL = str("tracearr_url")
+		c.ShowURL, _ = m["show_url"].(bool)
 		if v := str("silo_url"); v != "" {
 			c.SiloURL = strings.TrimRight(v, "/")
 		}

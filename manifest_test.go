@@ -32,7 +32,7 @@ func TestManifestFields(t *testing.T) {
 		t.Fatalf("config schema: %v", cs)
 	}
 	fields := cs[0].GetAdminForm().GetFields()
-	if len(fields) != 6 {
+	if len(fields) != 7 {
 		t.Fatalf("form fields: %d", len(fields))
 	}
 	secrets := 0
@@ -43,6 +43,16 @@ func TestManifestFields(t *testing.T) {
 	}
 	if secrets != 2 {
 		t.Errorf("secret fields: %d", secrets)
+	}
+	var gated bool
+	for _, f := range fields {
+		if f.GetKey() == "tracearr_url" {
+			c := f.GetShowWhen()
+			gated = len(c) == 1 && c[0].GetField() == "show_url" && len(c[0].GetEquals()) == 1 && c[0].GetEquals()[0] == "true"
+		}
+	}
+	if !gated {
+		t.Errorf("tracearr_url must be hidden until show_url is on")
 	}
 	if m.GetPresentation().GetDisplayName() == "" || m.GetPresentation().GetLicenseSpdx() == "" {
 		t.Errorf("presentation lost")

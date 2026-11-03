@@ -1,6 +1,6 @@
 {
   "plugin_id": "community.tracearr-connector",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "checksum": "__CHECKSUM__",
   "silo_api_version": "v1",
   "supported_platforms": [
@@ -27,7 +27,7 @@
       "title": "Connection",
       "description": "Everything needed to connect Tracearr. Paste the API key and the address, Save, then reload this page and copy the Tracearr server URL.",
       "required": true,
-      "json_schema": "{\"type\":\"object\",\"properties\":{\"access_secret\":{\"type\":\"string\"},\"admin_api_key\":{\"type\":\"string\",\"minLength\":4},\"silo_url\":{\"type\":\"string\"},\"jellyfin_url\":{\"type\":\"string\"},\"public_address\":{\"type\":\"string\"},\"tracearr_url\":{\"type\":\"string\"}},\"required\":[\"admin_api_key\"]}",
+      "json_schema": "{\"type\":\"object\",\"properties\":{\"access_secret\":{\"type\":\"string\"},\"admin_api_key\":{\"type\":\"string\",\"minLength\":4},\"silo_url\":{\"type\":\"string\"},\"jellyfin_url\":{\"type\":\"string\"},\"public_address\":{\"type\":\"string\"},\"tracearr_url\":{\"type\":\"string\"},\"show_url\":{\"type\":\"boolean\"}},\"required\":[\"admin_api_key\"]}",
       "admin_form": {
         "submit_label": "Save",
         "fields": [
@@ -47,10 +47,25 @@
             "placeholder": "http://192.168.1.10:8090"
           },
           {
+            "key": "show_url",
+            "label": "Show Tracearr server URL",
+            "description": "Switch on to reveal the URL below. It contains your access secret, so keep it private. It hides again after the next save.",
+            "control": "ADMIN_FORM_CONTROL_SWITCH",
+            "default_value": false
+          },
+          {
             "key": "tracearr_url",
             "label": "Tracearr server URL (copy this into Tracearr)",
-            "description": "Filled in automatically a few seconds after you save: reload this page to see it. It contains your access secret, so keep it private. Edits here are overwritten.",
-            "control": "ADMIN_FORM_CONTROL_TEXT"
+            "description": "Filled in automatically a few seconds after you save (reload this page to see it). Copy it into Tracearr. Edits here are overwritten.",
+            "control": "ADMIN_FORM_CONTROL_TEXT",
+            "show_when": [
+              {
+                "field": "show_url",
+                "equals": [
+                  "true"
+                ]
+              }
+            ]
           },
           {
             "key": "access_secret",
@@ -107,7 +122,7 @@
     "display_name": "Tracearr Connector",
     "summary": "Lets Tracearr monitor streams, users and sharing on this Silo server.",
     "description_markdown": "Tracearr monitors Plex, Jellyfin and Emby. This plugin presents Silo to Tracearr as a Jellyfin server, so Tracearr can show live streams from every account, with client IP addresses, and run its sharing detection.\n\nIt is read-only. It reads Silo's administrator session and user lists with an admin API key and passes other requests to Silo's Jellyfin-compatible listener.",
-    "setup_markdown": "1. In Silo, create an unscoped API key for an administrator account and turn on **Allow Jellyfin apps to connect**.\n2. Paste the API key and the address Tracearr uses to reach Silo (for example `http://192.168.1.10:8090`) and **Save**.\n3. After a few seconds, reload this page. **Tracearr server URL** is now filled in: copy it.\n4. In Tracearr, add a **Jellyfin** server and paste the URL. The API key field can hold any value.\n5. Keep the URL private: anyone who has it can read your stream list. Don't expose `/api/v1/plugins/` on a public proxy.\n\nAn optional **Tracearr setup** page in the plugin's menu shows the same URL hidden behind an eye icon.",
+    "setup_markdown": "1. In Silo, create an unscoped API key for an administrator account and turn on **Allow Jellyfin apps to connect**.\n2. Paste the API key and the address Tracearr uses to reach Silo (for example `http://192.168.1.10:8090`) and **Save**.\n3. After a few seconds, reload this page. switch on **Show Tracearr server URL** and copy the URL that appears.\n4. In Tracearr, add a **Jellyfin** server and paste the URL. The API key field can hold any value.\n5. Keep the URL private: anyone who has it can read your stream list. Don't expose `/api/v1/plugins/` on a public proxy.\n\nAn optional **Tracearr setup** page in the plugin's menu shows the same URL hidden behind an eye icon.",
     "license_spdx": "AGPL-3.0-or-later"
   }
 }
